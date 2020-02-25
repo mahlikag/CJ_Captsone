@@ -1,0 +1,209 @@
+---
+title: "Extracting NIBRS Data for the Network Analysis of Clearance Crime Rates Across the Country
+"
+author: "Mahlika George"
+output: pdf_document
+---
+## Storing Variables 
+
+To start the process of exporting the data into a formulated excel sheet, I first read in the data from the stored csv. The variables are than stored accordingly. 
+
+```{r}
+Data <- read.csv("C:/Users/mkg4541/Downloads/Sorted.csv", header = TRUE)
+City <- Data$BH007
+State <- Data$BH008
+cities <- list()
+
+#The following loop goes through all of the entries of cities listed in NIBRS and adds them to a new list only if they have not been added already. This is to remove duplicates.
+for (i in City) {
+    if (length(cities)==0) {
+      cities <- append(cities,i)
+    }
+    else if (!i %in% cities) {
+      cities <- append(cities,i)
+    }
+}
+
+#The following code resaves city to only store the top 100 cities by population
+cities <- head(cities,-(length(cities)-100))
+
+#The following stores the index in where the last city first appears in NIBRS so we can find the associated state
+#This loop finds where that city and state combo are last used in NIBRS so we can create a shortened data frame
+index <- which(City %in% cities[100])[1]
+s <- State[index]
+for (i in which(City %in% cities[100])) {
+  if(State[i] == s) {
+    iny <- i
+  }
+  else{
+    break
+  }
+}
+
+#A new data fram is created for only the top 100 cities
+new_Data <- Data[1:iny,]
+
+```
+
+## Calculating the Incidents and Rates
+
+Next, I then created several lists to calculate and store the total number of incidents of certain crimes and all crimes. That data is calculated with a series of loops and conditionals. 
+
+```{r}
+#Several new variables are created for future storing
+Counted <- list()
+
+#Total Incidents
+sum = list()
+
+AA <- list()
+Murder <- list()
+Robbery <- list()
+sum[1] = 0
+AA[1] <- 0
+Murder[1] <- 0
+Robbery[1] = 0
+
+#This variable is used to iterate through the list
+index <- 1
+
+#For numbers between 1 and the last index of the new data frame
+for (i in 1:iny) {
+  
+  #if the city has not yet been added to the list "Counted", and the sum is now 1
+  if (!as.character(new_Data$BH007[i]) %in% Counted) {
+    Counted[index] <- as.character(new_Data$BH007[i])
+    sum[index] <- 1
+    
+    #if the offense code is 120, a robbery was the type of crime reported and the robbery list at that index is 1
+     if (as.character(new_Data$V20061[i]) =="120") {
+       Robbery[index] <- 1
+     }
+    else {
+      #otherwise, if it is not a robbery, 0 robberies have been reported and thus 0
+      Robbery[index] <- 0
+    }
+    #if the other crime offense was a robbery, add 1 to the current total
+    if (as.character(new_Data$V20062[i]) =="120") {
+        Robbery[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Robbery[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    #if the other crime offense was a robbery, add 1 to the current total
+    if (as.character(new_Data$V20063[i]) =="120") {
+      Robbery[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Robbery[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    
+    #if the offense code is 91, a murder was the type of crime reported and the murder list at that index is 1
+    if (as.character(new_Data$V20061[i]) =="91") {
+      Murder[index] <- 1
+    }
+    
+    #otherwise, if it is not a murder, 0 murders have been reported and thus 0
+    else {
+      Murder[index] <- 0
+    }
+    
+    #if the other crime offense was a murder, add 1 to the current total
+    if (as.character(new_Data$V20062[i]) =="91") {
+      Murder[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Murder[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    #if the other crime offense was a murder, add 1 to the current total
+    if (as.character(new_Data$V20063[i]) =="91") {
+      Murder[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Murder[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    
+    #if the offense code is 131, an assult was the type of crime reported and the assault list at that index is 1
+    if (as.character(new_Data$V20061[i]) =="131") {
+      AA[index] <- 1
+    }
+   
+    #otherwise, if it is not an assault, 0 assaults have been reported and thus 0
+    else {
+      AA[index] <- 0
+    }
+    #if the other crime offense was an assault, add 1 to the current total
+    if (as.character(new_Data$V20062[i]) =="131") {
+      AA[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(AA[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    #if the other crime offense was an assault, add 1 to the current total
+    if (as.character(new_Data$V20063[i]) =="131") {
+      AA[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(AA[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    
+    #we now move to sorting in the next position in the new lists
+    index <- index + 1
+   
+  }
+  else {
+    #since that city was seen again, ad not for the first time, add 1 to its current incident total
+    sum[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(sum[match(as.character(new_Data$BH007[i]),Counted)])
+    
+    #since that city already has a stored number for the robbery total, add 1 to the robbery total
+    if (as.character(new_Data$V20061[i]) =="120") {
+        Robbery[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Robbery[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    #since that city already has a stored number for the robbery total, add 1 to the robbery total
+    if (as.character(new_Data$V20062[i]) =="120") {
+        Robbery[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Robbery[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    #since that city already has a stored number for the robbery total, add 1 to the robbery total
+    if (as.character(new_Data$V20063[i]) =="120") {
+      Robbery[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Robbery[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    
+    #since that city already has a stored number for the murder total, add 1 to the murder total
+    if (as.character(new_Data$V20061[i]) =="91") {
+        Murder[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Murder[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    #since that city already has a stored number for the murder total, add 1 to the murder total
+    if (as.character(new_Data$V20062[i]) =="91") {
+        Murder[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Murder[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    #since that city already has a stored number for the murder total, add 1 to the murder total
+    if (as.character(new_Data$V20063[i]) =="91") {
+      Murder[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(Murder[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    
+    #since that city already has a stored number for the assault total, add 1 to the assault total
+    if (as.character(new_Data$V20061[i]) =="131") {
+        AA[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(AA[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    #since that city already has a stored number for the assault total, add 1 to the assault total
+    if (as.character(new_Data$V20062[i]) =="131") {
+        AA[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(AA[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+    #since that city already has a stored number for the assault total, add 1 to the assault total
+    if (as.character(new_Data$V20063[i]) =="131") {
+      AA[match(as.character(new_Data$BH007[i]),Counted)] <- 1 + as.numeric(AA[match(as.character(new_Data$BH007[i]),Counted)])
+    }
+  }
+   
+
+}
+#Store the final city list as the Counted list
+final_city <- Counted
+final_state <- list()
+final_population <- list()
+j <-1
+
+#For every city in the Counted list, add there corresponding State from the data frame, in the same matching index but within a new list "final_state"
+for (i in final_city) {
+  final_state[j] <- as.character(new_Data$BH008[match(i,new_Data$BH007)])
+  final_population[j] <- as.character(new_Data$BH019[match(i,new_Data$BH007)])
+  j <- j + 1
+  }
+
+```
+
+Now that all of the values have been calculated, write it out to a new excel sheet
+
+```{r}
+#Download needed libraries
+library("xlsx")
+
+#Creating a new data frame of all of the new variables, and unlisting them so they are in the right format to do so
+tes <- data.frame("Total Population" = matrix(unlist(final_population)), "City" = matrix(unlist(final_city)), "State" = matrix(unlist(final_state)), "Total Incidents by city" = matrix(unlist(sum)), "Aggravated Assault Incidents" = matrix(unlist(AA)), "Murder/Nonnegligent Manslaughter Incidents" = matrix(unlist(Murder)), "Robbery Incidents" = matrix(unlist(Robbery)))
+
+#Writing the new data frame out to excel 
+write.xlsx2(tes, file = "testing.xlsx", col.names = TRUE, row.names = TRUE)
+```
+
